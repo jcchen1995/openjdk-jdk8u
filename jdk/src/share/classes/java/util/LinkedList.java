@@ -91,6 +91,7 @@ public class LinkedList<E>
      * Invariant: (first == null && last == null) ||
      *            (first.prev == null && first.item != null)
      */
+    // 由first和last可以看出，LinkedList是一个双向链表
     transient Node<E> first;
 
     /**
@@ -472,6 +473,7 @@ public class LinkedList<E>
      * @return the element at the specified position in this list
      * @throws IndexOutOfBoundsException {@inheritDoc}
      */
+    // 如果用 for循环遍历LinkedList，再在里面使用get(index)，那么他的效率其实是O(n平方)
     public E get(int index) {
         checkElementIndex(index);
         return node(index).item;
@@ -509,6 +511,10 @@ public class LinkedList<E>
         if (index == size)
             linkLast(element);
         else
+            // 这里要注意，虽然LinkedList插入动作是O(1)
+            // 但找到index位置的Node是O(n)的，所以整体复杂度是O(n)
+            // 这也是LinkedList的一个缺点
+            // FIXME ArrayList插入要挪动数据，也是O(n)
             linkBefore(element, node(index));
     }
 
@@ -563,9 +569,11 @@ public class LinkedList<E>
     /**
      * Returns the (non-null) Node at the specified element index.
      */
+
     Node<E> node(int index) {
         // assert isElementIndex(index);
-
+        // 这是个优化，在LinkedList中，如果index小于size的一半，
+        // 则从first开始遍历，反之从last开始遍历
         if (index < (size >> 1)) {
             Node<E> x = first;
             for (int i = 0; i < index; i++)
@@ -968,8 +976,11 @@ public class LinkedList<E>
     }
 
     private static class Node<E> {
+        // 具体元素
         E item;
+        // 下一个元素
         Node<E> next;
+        // 前一个元素
         Node<E> prev;
 
         Node(Node<E> prev, E element, Node<E> next) {

@@ -132,6 +132,8 @@ public class ArrayList<E> extends AbstractList<E>
      * empty ArrayList with elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA
      * will be expanded to DEFAULT_CAPACITY when the first element is added.
      */
+    // ArrayList本质是一个数字，理解这个很重要
+    // transient 的作用是禁止序列化或反序列化
     transient Object[] elementData; // non-private to simplify nested class access
 
     /**
@@ -139,6 +141,7 @@ public class ArrayList<E> extends AbstractList<E>
      *
      * @serial
      */
+    // size表示当前有多少个元素
     private int size;
 
     /**
@@ -264,6 +267,7 @@ public class ArrayList<E> extends AbstractList<E>
         if (newCapacity - MAX_ARRAY_SIZE > 0)
             newCapacity = hugeCapacity(minCapacity);
         // minCapacity is usually close to size, so this is a win:
+        // 扩容的代价，需要复制数组
         elementData = Arrays.copyOf(elementData, newCapacity);
     }
 
@@ -419,6 +423,7 @@ public class ArrayList<E> extends AbstractList<E>
 
     // Positional Access Operations
 
+    // 所谓的快速随机访问，就是利用数组的index
     @SuppressWarnings("unchecked")
     E elementData(int index) {
         return (E) elementData[index];
@@ -461,6 +466,7 @@ public class ArrayList<E> extends AbstractList<E>
      * @return <tt>true</tt> (as specified by {@link Collection#add})
      */
     public boolean add(E e) {
+        // 确保容量
         ensureCapacityInternal(size + 1);  // Increments modCount!!
         elementData[size++] = e;
         return true;
@@ -479,6 +485,7 @@ public class ArrayList<E> extends AbstractList<E>
         rangeCheckForAdd(index);
 
         ensureCapacityInternal(size + 1);  // Increments modCount!!
+        // 从指定的index添加数据的代价，需要挪动数据
         System.arraycopy(elementData, index, elementData, index + 1,
                          size - index);
         elementData[index] = element;
@@ -754,6 +761,11 @@ public class ArrayList<E> extends AbstractList<E>
      *             instance is emitted (int), followed by all of its elements
      *             (each an <tt>Object</tt>) in the proper order.
      */
+    // 这是ArrayList自己的序列化方式
+    // 如果用java默认的序列化方式，会将整个Object[]数组都序列化，包括那些null预留位
+    // 这样会浪费空间，而且反序列化后，ArrayList的size会变成数组的长度，而不是实际元素个数
+    // ArrayList认为用默认的序列化/反序列化方式是没必要的，所以将Object[] 数组用transient修饰
+    // 然后实现了自己的序列化/反序列化方式
     private void writeObject(java.io.ObjectOutputStream s)
         throws java.io.IOException{
         // Write out element count, and any hidden stuff
@@ -764,6 +776,10 @@ public class ArrayList<E> extends AbstractList<E>
         s.writeInt(size);
 
         // Write out all elements in the proper order.
+        // // 3. 关键：只序列化实际存在的元素！
+        //    // 遍历从 0 到 (size-1)，跳过数组中的 null 预留位
+
+        //
         for (int i=0; i<size; i++) {
             s.writeObject(elementData[i]);
         }
@@ -777,6 +793,9 @@ public class ArrayList<E> extends AbstractList<E>
      * Reconstitute the <tt>ArrayList</tt> instance from a stream (that is,
      * deserialize it).
      */
+    // 自定义的反序列化方式
+    // private方法，序列化/反序列化时，ObjectOutputStream的反射机制会优先看
+    // 类是否实现了这些方法，会的话会优先用这些方法
     private void readObject(java.io.ObjectInputStream s)
         throws java.io.IOException, ClassNotFoundException {
         elementData = EMPTY_ELEMENTDATA;
