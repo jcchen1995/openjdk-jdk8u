@@ -941,6 +941,8 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                     return e.val;
             }
             else if (eh < 0)
+                // 为什么CHM在扩容期间不会阻塞读？因为用了 ForwardingNode，ForwardingNode相当于一个信号
+                // 当在旧表发现这个信号，会立刻转向新表去查询
                 return (p = e.find(h, key)) != null ? p.val : null;
             while ((e = e.next) != null) {
                 if (e.hash == h &&
@@ -1007,6 +1009,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     }
 
     /** Implementation for put and putIfAbsent */
+    // CHM则通过CAS无锁尝试和细粒度锁的组合，保证线程安全，同时确保性能
     final V putVal(K key, V value, boolean onlyIfAbsent) {
         if (key == null || value == null) throw new NullPointerException();
         int hash = spread(key.hashCode());
@@ -1014,16 +1017,22 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
         for (Node<K,V>[] tab = table;;) {
             Node<K,V> f; int n, i, fh;
             if (tab == null || (n = tab.length) == 0)
+                // 这里发现table为null，里面也是用了CAS
                 tab = initTable();
             else if ((f = tabAt(tab, i = (n - 1) & hash)) == null) {
+                // 空桶插入，使用CAS
                 if (casTabAt(tab, i, null,
                              new Node<K,V>(hash, key, value, null)))
                     break;                   // no lock when adding to empty bin
             }
             else if ((fh = f.hash) == MOVED)
+                // 协助扩容
                 tab = helpTransfer(tab, f);
             else {
                 V oldVal = null;
+                // 这里是发现hash冲突，锁住头节点，用synchronized
+                // FIXME：所以，chm并不是全部情况都用CAS，在hash冲突时，会锁住桶的头节点，杜绝链表结构或树结构被破坏
+                // FIXME：与jdk7的区别，jdk7是分段锁（一个分段可能包括多个桶），而jdk8已经讲锁粒度细化到桶级别了
                 synchronized (f) {
                     if (tabAt(tab, i) == f) {
                         if (fh >= 0) {
@@ -1046,6 +1055,8 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                                 }
                             }
                         }
+                        // CHM同一个桶里，在元素不多的情况下会使用链表结构
+                        // 当元素多（HASH冲突）大，会转化为红黑树（FIXME:注意是转化，而不是说在链表后面用红黑树）
                         else if (f instanceof TreeBin) {
                             Node<K,V> p;
                             binCount = 2;
@@ -2220,6 +2231,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     /**
      * Initializes table, using the size recorded in sizeCtl.
      */
+    // CAS
     private final Node<K,V>[] initTable() {
         Node<K,V>[] tab; int sc;
         while ((tab = table) == null || tab.length == 0) {

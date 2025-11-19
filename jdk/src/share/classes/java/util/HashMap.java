@@ -623,14 +623,18 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * @param evict if false, the table is in creation mode.
      * @return previous value, or null if none
      */
+    // HashMap的线程不安全源于其无保护的非原子操作
     final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
                    boolean evict) {
         Node<K,V>[] tab; Node<K,V> p; int n, i;
         if ((tab = table) == null || (n = tab.length) == 0)
             n = (tab = resize()).length;
         if ((p = tab[i = (n - 1) & hash]) == null)
+            // 非原子操作，也没有加锁，可能被覆盖，出现并发问题
+            // 比如两个线程同时发现桶的头节点为null，于是都new新节点去赋值，结果第二个线程会覆盖第一个线程
             tab[i] = newNode(hash, key, value, null);
         else {
+            // 修改next指针，同样非原子
             Node<K,V> e; K k;
             if (p.hash == hash &&
                 ((k = p.key) == key || (key != null && key.equals(k))))
