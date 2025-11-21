@@ -179,6 +179,9 @@ class Thread implements Runnable {
 
     /* ThreadLocal values pertaining to this thread. This map is maintained
      * by the ThreadLocal class. */
+    // FIXME：注意，这里的threadLocals 是ThreadLocalMap类型；可以理解为是一个定制化的hash表
+    // FIXME：key是ThreadLocal变量本身，value是ThreadLocal变量的value的值
+    // FIXME：其中key是弱引用
     ThreadLocal.ThreadLocalMap threadLocals = null;
 
     /*

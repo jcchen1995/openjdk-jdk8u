@@ -320,6 +320,7 @@ import java.util.*;
  * @since 1.5
  * @author Doug Lea
  */
+// 王牌实现
 public class ThreadPoolExecutor extends AbstractExecutorService {
     /**
      * The main pool control state, ctl, is an atomic integer packing
@@ -1046,6 +1047,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
     private Runnable getTask() {
         boolean timedOut = false; // Did the last poll() time out?
 
+        // 无限循环获取任务
         for (;;) {
             int c = ctl.get();
             int rs = runStateOf(c);
@@ -1064,6 +1066,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
             if ((wc > maximumPoolSize || (timed && timedOut))
                 && (wc > 1 || workQueue.isEmpty())) {
                 if (compareAndDecrementWorkerCount(c))
+                    // 回收线程
                     return null;
                 continue;
             }
@@ -1131,7 +1134,9 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
         w.unlock(); // allow interrupts
         boolean completedAbruptly = true;
         try {
+            // 当getTask()返回null时跳出循环，也就是此时回收线程
             while (task != null || (task = getTask()) != null) {
+                // 加锁，表示Worker开始工作，不允许中断
                 w.lock();
                 // If pool is stopping, ensure thread is interrupted;
                 // if not, ensure thread is not interrupted.  This
@@ -1198,6 +1203,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
                               int maximumPoolSize,
                               long keepAliveTime,
                               TimeUnit unit,
+                              // 线程池的队列类型，规定了要阻塞队列，FIXME: 可是如果队列有边界，一定要“阻塞”特性吗？
                               BlockingQueue<Runnable> workQueue) {
         this(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue,
              Executors.defaultThreadFactory(), defaultHandler);
@@ -1373,8 +1379,11 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
             if (! isRunning(recheck) && remove(command))
                 reject(command);
             else if (workerCountOf(recheck) == 0)
+                //为什么传 null：调用 addWorker(null, false) 时把 firstTask 设为 null，
+                // 意味着新建线程启动后不会直接执行某个外部传入的任务，而是进入 getTask() 从 workQueue 拉取任务再执行。这样可以避免两类问题：
                 addWorker(null, false);
         }
+        // 队列满了，尝试创建临时线程
         else if (!addWorker(command, false))
             reject(command);
     }
@@ -2020,6 +2029,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      * unless the executor has been shut down, in which case the task
      * is discarded.
      */
+    // 决绝策略4: 由主调线程自己执行
     public static class CallerRunsPolicy implements RejectedExecutionHandler {
         /**
          * Creates a {@code CallerRunsPolicy}.
@@ -2044,6 +2054,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      * A handler for rejected tasks that throws a
      * {@code RejectedExecutionException}.
      */
+    // 拒绝策略1:抛异常Abort
     public static class AbortPolicy implements RejectedExecutionHandler {
         /**
          * Creates an {@code AbortPolicy}.
@@ -2068,6 +2079,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      * A handler for rejected tasks that silently discards the
      * rejected task.
      */
+    // 拒绝策略2:丢弃任务
     public static class DiscardPolicy implements RejectedExecutionHandler {
         /**
          * Creates a {@code DiscardPolicy}.
@@ -2089,6 +2101,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      * request and then retries {@code execute}, unless the executor
      * is shut down, in which case the task is discarded.
      */
+    // 拒绝策略3:丢弃最老的任务并尝试重新提交任务
     public static class DiscardOldestPolicy implements RejectedExecutionHandler {
         /**
          * Creates a {@code DiscardOldestPolicy} for the given executor.

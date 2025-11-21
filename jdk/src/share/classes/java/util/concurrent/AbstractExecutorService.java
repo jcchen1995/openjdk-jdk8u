@@ -68,6 +68,7 @@ import java.util.*;
  * @since 1.5
  * @author Doug Lea
  */
+// 核心抽象类，是线程池的骨架
 public abstract class AbstractExecutorService implements ExecutorService {
 
     /**

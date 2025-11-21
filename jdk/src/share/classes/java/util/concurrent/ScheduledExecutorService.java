@@ -91,6 +91,7 @@ package java.util.concurrent;
  * @since 1.5
  * @author Doug Lea
  */
+// 可调度接口：支持延迟执行、定期执行等
 public interface ScheduledExecutorService extends ExecutorService {
 
     /**

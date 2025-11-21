@@ -118,6 +118,7 @@ import java.util.*;
  * @since 1.5
  * @author Doug Lea
  */
+// 继承王牌实现ThreadPoolExecutor和实现可调度接口ScheduledExecutorService，具体实现可调度线程池
 public class ScheduledThreadPoolExecutor
         extends ThreadPoolExecutor
         implements ScheduledExecutorService {
